@@ -33,11 +33,20 @@ LIB_BUILD_DIR := $(BUILD_DIR)/lib
 STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).a
 DYNAMIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
 
+# toggle glog or miniglog
+USE_GLOG ?= 1
+ifneq ($(USE_GLOG), 1)
+	LIBRARIES += glog
+else
+	CXX_SRCS := ./src/ceres/internal/miniglog/glog/logging.cpp
+	INCLUDE_DIRS := ./include/ceres/internal/miniglog/ $(INCLUDE_DIRS)
+endif
+
 ##############################
 # Get all source files
 ##############################
 # CXX_SRCS are the source files excluding the test ones.
-CXX_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cpp" -name "*.cpp")
+CXX_SRCS += $(shell find src/$(PROJECT) ! -name "test_*.cpp" -name "*.cpp")
 # CU_SRCS are the cuda source files
 CU_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cu" -name "*.cu")
 # TEST_SRCS are the test source files
@@ -170,11 +179,12 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog gflags protobuf boost_system m hdf5_hl hdf5
+LIBRARIES += gflags protobuf boost_system m
 
 # handle IO dependencies
 USE_LEVELDB ?= 1
 USE_LMDB ?= 1
+USE_HDF5 ?= 1
 USE_OPENCV ?= 1
 
 ifeq ($(USE_LEVELDB), 1)
@@ -182,6 +192,9 @@ ifeq ($(USE_LEVELDB), 1)
 endif
 ifeq ($(USE_LMDB), 1)
 	LIBRARIES += lmdb
+endif
+ifeq ($(USE_HDF5), 1)
+	LIBRARIES += hdf5_hl hdf5
 endif
 ifeq ($(USE_OPENCV), 1)
 	LIBRARIES += opencv_core opencv_highgui opencv_imgproc
@@ -304,6 +317,11 @@ ifeq ($(USE_CUDNN), 1)
 	COMMON_FLAGS += -DUSE_CUDNN
 endif
 
+# glog configuration.
+ifeq ($(USE_GLOG), 1)
+	COMMON_FLAGS += -DUSE_GLOG
+endif
+
 # configure IO libraries
 ifeq ($(USE_OPENCV), 1)
 	COMMON_FLAGS += -DUSE_OPENCV
@@ -313,6 +331,9 @@ ifeq ($(USE_LEVELDB), 1)
 endif
 ifeq ($(USE_LMDB), 1)
 	COMMON_FLAGS += -DUSE_LMDB
+endif
+ifeq ($(USE_HDF5), 1)
+	COMMON_FLAGS += -DUSE_HDF5
 endif
 
 # CPU-only configuration
